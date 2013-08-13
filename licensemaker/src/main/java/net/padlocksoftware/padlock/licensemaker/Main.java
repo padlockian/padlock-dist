@@ -34,6 +34,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+
 import net.padlocksoftware.padlock.KeyManager;
 import net.padlocksoftware.padlock.license.License;
 import net.padlocksoftware.padlock.license.LicenseFactory;
@@ -53,6 +54,7 @@ public class Main {
     static Properties properties = new Properties();
     static KeyPair keyPair = null;
     static File licenseFile = null;
+    static File padlockLicenseFile = null;
     static License license = null;
     static Date startDate = null;
     static Date expirationDate = null;
@@ -84,6 +86,8 @@ public class Main {
                 "                            in the form of \"key1=value1, key2=value2\"");
         System.err.println("   -h <Addresses>           Hardware locked addresses, expressed as a single string\n" +
                 "                            in the form of \"mac1, mac2, mac3\"");
+        System.err.println("   -l <Filepath>            Padlock license file path if located outside the default\n" + 
+                "                            location");
         System.exit(1);
 
     }
@@ -181,6 +185,10 @@ public class Main {
         }
     }
 
+    private static void parsePadlockLicenseFile(String arg) {
+    	padlockLicenseFile = new File(arg);
+    }
+    
     private static void parseLicenseFile(String arg) {
         licenseFile = new File(arg);
     }
@@ -253,6 +261,9 @@ public class Main {
             } else if (arg.equals("-o")) {
                 x++;
                 parseLicenseFile(args[x]);
+            } else if (arg.equals("-l")) {
+                x++;
+                parsePadlockLicenseFile(args[x]);
             } else if (arg.equals("-h")) {
                 x++;
                 parseLicenseHardware(args[x]);
@@ -316,9 +327,14 @@ public class Main {
         // Finally, sign the file
         //
 
-        LicenseSigner signer = LicenseSigner.createLicenseSigner((DSAPrivateKey) keyPair.getPrivate());
-        signer.sign(license);
-
+        try {
+	        LicenseSigner signer = LicenseSigner.createLicenseSigner((DSAPrivateKey) keyPair.getPrivate(), padlockLicenseFile);
+	        signer.sign(license);
+        } catch (IOException e) {
+        	System.err.println("\nError during signing the license: " + e.getMessage() + "\n");
+            System.exit(1);
+        }
+	        
         try {
             //
             // Export to file
